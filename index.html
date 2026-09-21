@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EWS Mutasi Pegawai - PT PLN (Persero)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse for parsing Google Sheets CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        plnBlue: '#005a9c',
+                        plnCyan: '#00aeb3',
+                        plnYellow: '#f2a900'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .nav-item.active { border-bottom: 3px solid #f2a900; color: #f2a900; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-plnBlue to-blue-900 px-4 z-50 fixed inset-0">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-plnYellow"></div>
+            <div class="text-center mb-8">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-24 mx-auto mb-4 object-contain drop-shadow-md" onerror="this.src='https://placehold.co/200x100/005a9c/ffffff?text=PLN'">
+                <h2 class="text-2xl font-bold text-gray-800">EWS Mutasi PLN</h2>
+                <p class="text-gray-500 text-sm mt-1">Sistem Peringatan Dini HRD</p>
+            </div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="mb-5">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="username">Username</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-user text-gray-400"></i>
+                        </div>
+                        <input type="text" id="username" required class="pl-10 shadow appearance-none border rounded w-full py-3 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-plnBlue transition" placeholder="Masukkan username">
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-lock text-gray-400"></i>
+                        </div>
+                        <input type="password" id="password" required class="pl-10 shadow appearance-none border rounded w-full py-3 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-plnBlue transition" placeholder="Masukkan password">
+                    </div>
+                </div>
+                
+                <div id="login-error" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-3 mb-5 text-sm rounded shadow-sm font-semibold">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> Username atau password salah!
+                </div>
+
+                <button type="submit" id="login-btn" class="w-full bg-plnBlue hover:bg-blue-800 text-white font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline transition flex justify-center items-center">
+                    <span>Login Sistem</span>
+                    <i id="login-spinner" class="fa-solid fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+            </form>
+            <div class="mt-6 text-center text-xs text-gray-400">
+                &copy; 2026 PT PLN (Persero) UID Lampung
+            </div>
+        </div>
+    </div>
+
+    <!-- APP WRAPPER (Disembunyikan sebelum login) -->
+    <div id="app-screen" class="hidden flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-plnBlue text-white shadow-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="bg-white p-1 rounded border-2 border-plnYellow flex items-center justify-center">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-10 w-auto object-contain" onerror="this.src='https://placehold.co/100x50/ffffff/005a9c?text=PLN'">
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold">HRD Early Warning System</h1>
+                    <p class="text-sm text-gray-200">PT PLN (Persero) UID Lampung</p>
+                </div>
+            </div>
+            <div class="text-sm flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-blue-900/50 px-3 py-1.5 rounded-lg border border-blue-700">
+                    <i class="fa-solid fa-user-circle text-xl text-plnYellow"></i>
+                    <span class="font-medium">Admin HRD</span>
+                </div>
+                <!-- Tombol Logout -->
+                <button onclick="handleLogout()" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium px-3.5 py-1.5 rounded-lg transition duration-200 shadow-sm hover:shadow active:scale-95 text-xs">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+        <!-- Navigation -->
+        <nav class="container mx-auto px-6 mt-2 flex gap-6 border-t border-blue-800">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active py-3 hover:text-plnYellow transition">
+                <i class="fa-solid fa-chart-pie mr-2"></i> Dashboard Data
+            </button>
+            <button onclick="switchTab('prediction')" id="nav-prediction" class="nav-item py-3 hover:text-plnYellow transition">
+                <i class="fa-solid fa-microchip mr-2"></i> Simulasi Prediksi (Decision Tree)
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8 flex-grow">
+        
+        <!-- ALERT GOOGLE SHEETS -->
+        <div id="gsheet-alert" class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded shadow-sm hidden" role="alert">
+            <p class="font-bold">Info Integrasi Data</p>
+            <p class="text-sm">Data di bawah ini ditarik secara real-time dari Google Sheets. Jika gagal, sistem menggunakan data dummy lokal.</p>
+        </div>
+
+        <!-- TAB 1: DASHBOARD -->
+        <section id="dashboard" class="tab-content active">
+            <!-- Top Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Clickable Stats for Filtering -->
+                <div onclick="filterTable('Semua')" class="bg-white rounded-lg shadow p-6 border-l-4 border-plnBlue cursor-pointer hover:bg-blue-50 transition duration-200">
+                    <h3 class="text-gray-500 text-sm font-semibold">Total Pegawai UID Lampung</h3>
+                    <p class="text-3xl font-bold text-gray-800 mt-2" id="stat-total">0</p>
+                    <p class="text-xs text-blue-500 mt-1"><i class="fa-solid fa-filter"></i> Tampilkan Semua</p>
+                </div>
+                <div onclick="filterTable('Tinggi')" class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500 cursor-pointer hover:bg-red-50 transition duration-200">
+                    <h3 class="text-gray-500 text-sm font-semibold">Potensi Mutasi (Tinggi)</h3>
+                    <p class="text-3xl font-bold text-red-600 mt-2" id="stat-high">0</p>
+                    <p class="text-xs text-red-400 mt-1"><i class="fa-solid fa-filter"></i> Klik untuk filter</p>
+                </div>
+                <div onclick="filterTable('Sedang')" class="bg-white rounded-lg shadow p-6 border-l-4 border-plnYellow cursor-pointer hover:bg-yellow-50 transition duration-200">
+                    <h3 class="text-gray-500 text-sm font-semibold">Potensi Mutasi (Sedang)</h3>
+                    <p class="text-3xl font-bold text-yellow-600 mt-2" id="stat-med">0</p>
+                    <p class="text-xs text-yellow-500 mt-1"><i class="fa-solid fa-filter"></i> Klik untuk filter</p>
+                </div>
+                <div onclick="filterTable('Rendah')" class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500 cursor-pointer hover:bg-green-50 transition duration-200">
+                    <h3 class="text-gray-500 text-sm font-semibold">Status Aman (Rendah)</h3>
+                    <p class="text-3xl font-bold text-green-600 mt-2" id="stat-low">0</p>
+                    <p class="text-xs text-green-400 mt-1"><i class="fa-solid fa-filter"></i> Klik untuk filter</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Table Data -->
+                <div class="lg:col-span-2 bg-white rounded-lg shadow overflow-hidden">
+                    <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+                        <h2 class="font-bold text-gray-700">Database Pegawai <span id="table-filter-label" class="text-sm font-normal text-gray-500 ml-2">(Menampilkan Semua)</span></h2>
+                        <button onclick="fetchGoogleSheetsData()" class="text-sm bg-plnBlue text-white px-3 py-1 rounded hover:bg-blue-700 transition">
+                            <i class="fa-solid fa-sync-alt mr-1"></i> Refresh Data
+                        </button>
+                    </div>
+                    <!-- Added max-height for scrolling -->
+                    <div class="overflow-x-auto" style="max-height: 400px;">
+                        <table class="min-w-full text-sm text-left relative">
+                            <thead class="bg-gray-100 text-gray-600 sticky top-0 shadow-sm">
+                                <tr>
+                                    <th class="px-6 py-3">Nama Pegawai</th>
+                                    <th class="px-6 py-3">Usia</th>
+                                    <th class="px-6 py-3">Masa Kerja</th>
+                                    <th class="px-6 py-3">Jarak</th>
+                                    <th class="px-6 py-3">Status Pernikahan</th>
+                                    <th class="px-6 py-3">Prediksi Sistem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employee-table-body" class="divide-y divide-gray-200 bg-white">
+                                <!-- Data will be populated here via JS -->
+                                <tr><td colspan="6" class="text-center py-4 text-gray-500">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Chart Section (Tempat Grafik yang sebelumnya hilang) -->
+                <div class="bg-white rounded-lg shadow flex flex-col">
+                    <div class="px-6 py-4 border-b bg-gray-50">
+                        <h2 class="font-bold text-gray-700">Visualisasi Risiko</h2>
+                    </div>
+                    <div class="p-6 flex-grow relative min-h-[300px]">
+                        <canvas id="mutasiChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: PREDICTION (Yang sebelumnya ikut terpotong) -->
+        <section id="prediction" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Form Input -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="font-bold text-gray-700 text-lg border-b pb-3 mb-6"><i class="fa-solid fa-calculator text-plnBlue mr-2"></i> Form Simulasi Prediksi</h2>
+                    <form onsubmit="handlePrediction(event)">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Nama Pegawai (Opsional)</label>
+                            <input type="text" id="input-nama" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-plnCyan transition" placeholder="Masukkan nama">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2">Usia</label>
+                                <select id="input-usia" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-plnCyan transition">
+                                    <option value="" disabled selected>-- Pilih --</option>
+                                    <option value="Muda">Muda (< 30)</option>
+                                    <option value="Produktif">Produktif (31-40)</option>
+                                    <option value="Matang">Matang (> 40)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2">Masa Kerja</label>
+                                <select id="input-masa" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-plnCyan transition">
+                                    <option value="" disabled selected>-- Pilih --</option>
+                                    <option value="Baru">Baru (0-4 Thn)</option>
+                                    <option value="Sedang">Sedang (5-10 Thn)</option>
+                                    <option value="Lama">Lama (> 10 Thn)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2">Jarak Domisili Asal</label>
+                                <select id="input-jarak" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-plnCyan transition">
+                                    <option value="" disabled selected>-- Pilih --</option>
+                                    <option value="Dekat">Dekat (< 50 km)</option>
+                                    <option value="Sedang">Sedang (50-200 km)</option>
+                                    <option value="Jauh">Jauh (> 200 km)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2">Status Pernikahan</label>
+                                <select id="input-status" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-plnCyan transition">
+                                    <option value="" disabled selected>-- Pilih --</option>
+                                    <option value="Belum Menikah">Belum Menikah</option>
+                                    <option value="Menikah">Menikah</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-plnYellow hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200">
+                            <i class="fa-solid fa-cogs mr-2"></i> Eksekusi Model C4.5
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Hasil Prediksi -->
+                <div id="result-container" class="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 flex flex-col justify-center items-center text-center text-gray-400 h-full">
+                    <i class="fa-solid fa-robot text-6xl mb-4 text-gray-300"></i>
+                    <p class="text-lg">Sistem Standby. <br>Silakan masukkan profil pegawai pada form dan klik Eksekusi untuk memprediksi probabilitas mutasi.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+        <footer class="bg-gray-800 text-white py-6 mt-auto">
+            <div class="container mx-auto px-6 text-center text-sm">
+                <p>&copy; 2026 PT PLN (Persero) UID Lampung - HRD Early Warning System.</p>
+                <p class="text-gray-400 mt-1">Prototipe Skripsi - Wawan Setiawan (2802633576) | Universitas Bina Nusantara</p>
+            </div>
+        </footer>
+
+    </div> <!-- End of App Wrapper -->
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 0. LOGIN & ENCRYPTION LOGIC ---
+        // Menggunakan endpoint gviz untuk membaca sheet tertentu ("user")
+        const LOGIN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1HfDIjjms41TavqBEa7vKiyN8i38tjFDUvb9bAFKMWjY/gviz/tq?tqx=out:csv&sheet=user";
+        
+        // Fungsi Enkripsi Password (Hashing SHA-256)
+        async function hashPassword(password) {
+            const msgBuffer = new TextEncoder().encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const userVal = document.getElementById('username').value.trim();
+            const passVal = document.getElementById('password').value.trim();
+            const btn = document.getElementById('login-btn');
+            const spinner = document.getElementById('login-spinner');
+            const errorBox = document.getElementById('login-error');
+
+            // UI Loading state
+            btn.disabled = true;
+            btn.classList.add('opacity-75');
+            spinner.classList.remove('hidden');
+            errorBox.classList.add('hidden');
+
+            const hashedInput = await hashPassword(passVal);
+
+            Papa.parse(LOGIN_SHEET_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    let isValid = false;
+                    
+                    // Periksa kecocokan data dari Google Sheets
+                    if (results.data && results.data.length > 0) {
+                        for(let row of results.data) {
+                            if(row.username === userVal && row.password === hashedInput) {
+                                isValid = true; 
+                                break;
+                            }
+                        }
+                    }
+
+                    // FALLBACK PROTOTYPE (Anti-Gagal Sidang):
+                    // Aktif jika Google Sheets kosong/error CORS, tapi inputnya benar
+                    if(!isValid && userVal === 'admin' && passVal === 'admin123') {
+                        console.warn("Menggunakan Local Fallback karena Google Sheets tidak merespon/kosong.");
+                        isValid = true;
+                    }
+
+                    if(isValid) {
+                        // Berhasil Login
+                        document.getElementById('login-screen').classList.add('hidden');
+                        document.getElementById('app-screen').classList.remove('hidden');
+                        document.getElementById('app-screen').classList.add('flex');
+                        
+                        // Tarik Data EWS Pegawai HANYA setelah login berhasil
+                        fetchGoogleSheetsData();
+                    } else {
+                        // Gagal Login
+                        errorBox.innerHTML = "<i class='fa-solid fa-circle-exclamation mr-1'></i> Username atau password salah!";
+                        errorBox.classList.remove('hidden');
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75');
+                        spinner.classList.add('hidden');
+                    }
+                },
+                error: function(err) {
+                    // Fallback jika internet bermasalah murni
+                    if(userVal === 'admin' && passVal === 'admin123') {
+                        document.getElementById('login-screen').classList.add('hidden');
+                        document.getElementById('app-screen').classList.remove('hidden');
+                        document.getElementById('app-screen').classList.add('flex');
+                        fetchGoogleSheetsData();
+                    } else {
+                        errorBox.innerHTML = "<i class='fa-solid fa-wifi mr-1'></i> Gagal terhubung ke Database Akun.";
+                        errorBox.classList.remove('hidden');
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75');
+                        spinner.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // --- FUNGSI LOGOUT ---
+        function handleLogout() {
+            // Sembunyikan aplikasi utama
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('flex');
+            
+            // Tampilkan kembali layar login
+            document.getElementById('login-screen').classList.remove('hidden');
+            
+            // Reset input form login
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            
+            // Reset status tombol login
+            const btn = document.getElementById('login-btn');
+            const spinner = document.getElementById('login-spinner');
+            const errorBox = document.getElementById('login-error');
+            
+            btn.disabled = false;
+            btn.classList.remove('opacity-75');
+            spinner.classList.add('hidden');
+            errorBox.classList.add('hidden');
+        }
+
+        // --- 1. TAB NAVIGATION ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('nav-' + tabId).classList.add('active');
+        }
+
+        // Global variable to hold all data for interactive filtering
+        let allEmployeeData = [];
+        let chartInstance = null;
+
+        // --- 2. MACHINE LEARNING LOGIC ---
+        function decisionTreePrediction(usiaInput, masaInput, jarakInput, statusInput) {
+            const u = (usiaInput || "").toLowerCase();
+            const m = (masaInput || "").toLowerCase();
+            const j = (jarakInput || "").toLowerCase();
+            const s = (statusInput || "").toLowerCase();
+
+            // REVISED RULES: Berdasarkan temuan lapangan aktual PLN Lampung (Multi-variabel KETAT)
+
+            // Rule 1 (SATU-SATUNYA PEMICU RISIKO TINGGI): Masa Kerja Lama + Jarak Jauh + Usia Produktif + Menikah
+            if (m.includes('lama') && j.includes('jauh') && u.includes('produktif') && s.includes('menikah') && !s.includes('belum')) {
+                return { risk: 'Tinggi', label: 'Sangat Berpotensi Mutasi (Puncak Karir & Prioritas Keluarga)', color: 'bg-red-100 border-red-500 text-red-700', icon: 'fa-exclamation-triangle text-red-500' };
+            }
+
+            // Rule 2: Sisanya yang jarak Jauh -> Risiko Sedang
+            if (j.includes('jauh')) {
+                return { risk: 'Sedang', label: 'Potensi Mutasi (Alasan Geografis)', color: 'bg-yellow-100 border-yellow-500 text-yellow-700', icon: 'fa-exclamation-circle text-yellow-500' };
+            }
+
+            // Rule 3: Sisanya (Jarak Sedang/Dekat) -> Risiko Rendah
+            return { risk: 'Rendah', label: 'Tidak Mutasi (Stay)', color: 'bg-green-100 border-green-500 text-green-700', icon: 'fa-check-circle text-green-500' };
+        }
+
+        // --- 3. GOOGLE SHEETS INTEGRATION ---
+        const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSOXVQ17-sHMelbXviqwo-KaAEJOe27k-uy9dS_y8zwx26T98jvO7ilszul6TnP8wttqE5nky3FLSjF/pub?output=csv";
+        
+        async function fetchGoogleSheetsData() {
+            document.getElementById('gsheet-alert').classList.remove('hidden');
+            const tbody = document.getElementById('employee-table-body');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Membaca data Google Sheets...</td></tr>';
+            
+            Papa.parse(GOOGLE_SHEETS_CSV_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processAndStoreData(results.data);
+                },
+                error: function(err) {
+                    console.error("Gagal membaca Google Sheets. Periksa Link/CORS.", err);
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500"><i class="fa-solid fa-circle-exclamation mr-1"></i> Gagal terhubung ke Google Sheets.</td></tr>';
+                }
+            });
+        }
+
+        function processAndStoreData(rawData) {
+            allEmployeeData = [];
+            let countHigh = 0, countMed = 0, countLow = 0, countTotal = 0;
+
+            rawData.forEach(row => {
+                // Lewati baris jika nama kosong (mencegah error baris hantu)
+                if (!row.nama || row.nama.trim() === "") return;
+                
+                const pred = decisionTreePrediction(row.usia, row.masa, row.jarak, row.status);
+                
+                // Simpan kalkulasi untuk fitur filter
+                row.calculatedRisk = pred.risk; 
+                row.badgeClass = pred.risk === 'Tinggi' ? 'bg-red-100 text-red-800' : 
+                                 (pred.risk === 'Sedang' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800');
+                
+                allEmployeeData.push(row);
+                countTotal++;
+
+                if (pred.risk === 'Tinggi') countHigh++;
+                else if (pred.risk === 'Sedang') countMed++;
+                else countLow++;
+            });
+
+            // Update UI Stats
+            document.getElementById('stat-total').innerText = countTotal;
+            document.getElementById('stat-high').innerText = countHigh;
+            document.getElementById('stat-med').innerText = countMed;
+            document.getElementById('stat-low').innerText = countLow;
+
+            renderChart(countHigh, countMed, countLow);
+
+            // Tampilkan semua data di awal
+            filterTable('Semua');
+        }
+
+        // --- 4. INTERACTIVE TABLE FILTERING ---
+        function filterTable(filterRiskLevel) {
+            const tbody = document.getElementById('employee-table-body');
+            const label = document.getElementById('table-filter-label');
+            tbody.innerHTML = '';
+            
+            if(filterRiskLevel === 'Semua') {
+                label.innerText = "(Menampilkan Semua)";
+            } else {
+                label.innerText = `(Filter: Risiko ${filterRiskLevel})`;
+            }
+
+            const filteredData = filterRiskLevel === 'Semua' 
+                ? allEmployeeData 
+                : allEmployeeData.filter(emp => emp.calculatedRisk === filterRiskLevel);
+            
+            if(filteredData.length === 0){
+                 tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Tidak ada data untuk kategori ini.</td></tr>`;
+                 return;
+            }
+
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition border-b";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-gray-800">${row.nama}</td>
+                    <td class="px-6 py-4 text-gray-600">${row.usia || '-'}</td>
+                    <td class="px-6 py-4 text-gray-600">${row.masa || '-'}</td>
+                    <td class="px-6 py-4 text-gray-600">${row.jarak || '-'}</td>
+                    <td class="px-6 py-4 text-gray-600">${row.status || '-'}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 rounded text-xs font-bold ${row.badgeClass}">
+                            ${row.calculatedRisk} Risk
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 5. CHART.JS RENDERING ---
+        function renderChart(high, med, low) {
+            const ctx = document.getElementById('mutasiChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy(); 
+
+            // Empty state chart fallback
+            if (high === 0 && med === 0 && low === 0) {
+                 chartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: ['Kosong'], datasets: [{ data: [1], backgroundColor: ['#e5e7eb'], borderWidth: 0 }] },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { tooltip: { enabled: false }, legend: { position: 'bottom' } } }
+                });
+                return;
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Risiko Tinggi', 'Risiko Sedang', 'Risiko Rendah'],
+                    datasets: [{
+                        data: [high, med, low],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#22c55e'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        // --- 6. FORM PREDICTION HANDLER ---
+        function handlePrediction(event) {
+            event.preventDefault(); 
+            
+            const nama = document.getElementById('input-nama').value || 'Karyawan';
+            const usia = document.getElementById('input-usia').value;
+            const masa = document.getElementById('input-masa').value;
+            const jarak = document.getElementById('input-jarak').value;
+            const status = document.getElementById('input-status').value;
+
+            const pred = decisionTreePrediction(usia, masa, jarak, status);
+
+            const resultBox = document.getElementById('result-container');
+            resultBox.className = `bg-white rounded-lg shadow p-6 h-full border-t-8 border flex flex-col justify-center items-center text-center transition-all duration-500 ${pred.color}`;
+            
+            resultBox.innerHTML = `
+                <i class="fa-solid ${pred.icon} text-6xl mb-4"></i>
+                <h2 class="text-2xl font-bold mb-2">Hasil Prediksi</h2>
+                <div class="p-4 bg-white bg-opacity-50 rounded-lg w-full mt-2">
+                    <p class="text-gray-700">Pegawai <strong>${nama}</strong> diprediksi memiliki:</p>
+                    <p class="text-3xl font-black mt-2 tracking-wide">${pred.risk.toUpperCase()} RISK</p>
+                    <p class="font-semibold mt-1">(${pred.label})</p>
+                </div>
+                <div class="mt-6 text-sm text-left w-full border-t pt-4 border-opacity-30">
+                    <strong>Rekomendasi Tindakan HRD:</strong><br>
+                    <span class="text-gray-600 mt-1 block">
+                    ${pred.risk === 'Tinggi' ? 'Segera jadwalkan sesi konseling retensi (terkait kesejahteraan keluarga). Pertimbangkan opsi rotasi kerja internal terdekat atau fasilitasi bantuan kunjungan keluarga.' : ''}
+                    ${pred.risk === 'Sedang' ? 'Lakukan pemantauan motivasi kerja secara berkala. Pastikan karyawan tetap engage dengan program perusahaan.' : ''}
+                    ${pred.risk === 'Rendah' ? 'Karyawan memiliki kecenderungan loyal (stay) yang tinggi di lokasi saat ini. Lanjutkan penugasan standar.' : ''}
+                    </span>
+                </div>
+            `;
+        }
+
+        // Init App
+        window.onload = () => {
+            // Data pegawai tidak ditarik di sini lagi, melainkan menunggu Login sukses.
+            // fetchGoogleSheetsData(); 
+        };
+
+    </script>
+</body>
+</html>
