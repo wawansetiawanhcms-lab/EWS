@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+Put your HTML text here<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -40,7 +40,7 @@
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-2 bg-plnYellow"></div>
             <div class="text-center mb-8">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-24 mx-auto mb-4 object-contain drop-shadow-md">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-24 mx-auto mb-4 object-contain drop-shadow-md" onerror="this.src='https://placehold.co/200x100/005a9c/ffffff?text=PLN'">
                 <h2 class="text-2xl font-bold text-gray-800">EWS Mutasi PLN</h2>
                 <p class="text-gray-500 text-sm mt-1">Sistem Peringatan Dini HRD</p>
             </div>
@@ -88,7 +88,7 @@
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <div class="flex items-center gap-4">
                 <div class="bg-white p-1 rounded border-2 border-plnYellow flex items-center justify-center">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-10 w-auto object-contain">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-10 w-auto object-contain" onerror="this.src='https://placehold.co/100x50/ffffff/005a9c?text=PLN'">
                 </div>
                 <div>
                     <h1 class="text-xl font-bold">HRD Early Warning System</h1>
@@ -184,7 +184,7 @@
                     </div>
                 </div>
 
-                <!-- Chart Section -->
+                <!-- Chart Section (Tempat Grafik yang sebelumnya hilang) -->
                 <div class="bg-white rounded-lg shadow flex flex-col">
                     <div class="px-6 py-4 border-b bg-gray-50">
                         <h2 class="font-bold text-gray-700">Visualisasi Risiko</h2>
@@ -196,7 +196,7 @@
             </div>
         </section>
 
-        <!-- TAB 2: PREDICTION -->
+        <!-- TAB 2: PREDICTION (Yang sebelumnya ikut terpotong) -->
         <section id="prediction" class="tab-content">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Form Input -->
@@ -221,8 +221,8 @@
                                 <label class="block text-gray-700 text-sm font-bold mb-2">Masa Kerja</label>
                                 <select id="input-masa" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-plnCyan transition">
                                     <option value="" disabled selected>-- Pilih --</option>
-                                    <option value="Baru">Baru (<= 3 Thn)</option>
-                                    <option value="Sedang">Sedang (4-10 Thn)</option>
+                                    <option value="Baru">Baru (0-4 Thn)</option>
+                                    <option value="Sedang">Sedang (5-10 Thn)</option>
                                     <option value="Lama">Lama (> 10 Thn)</option>
                                 </select>
                             </div>
@@ -274,6 +274,7 @@
     <!-- JavaScript Logic -->
     <script>
         // --- 0. LOGIN & ENCRYPTION LOGIC ---
+        // Menggunakan endpoint gviz untuk membaca sheet tertentu ("user")
         const LOGIN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1HfDIjjms41TavqBEa7vKiyN8i38tjFDUvb9bAFKMWjY/gviz/tq?tqx=out:csv&sheet=user";
         
         // Fungsi Enkripsi Password (Hashing SHA-256)
@@ -318,6 +319,7 @@
                     }
 
                     // FALLBACK PROTOTYPE (Anti-Gagal Sidang):
+                    // Aktif jika Google Sheets kosong/error CORS, tapi inputnya benar
                     if(!isValid && userVal === 'admin' && passVal === 'admin123') {
                         console.warn("Menggunakan Local Fallback karena Google Sheets tidak merespon/kosong.");
                         isValid = true;
@@ -395,88 +397,27 @@
         let allEmployeeData = [];
         let chartInstance = null;
 
-        // Helper untuk mendeteksi apakah Jarak > 150 KM (Jauh)
-        function isJarakJauh(jStr) {
-            const j = (jStr || "").toLowerCase().trim();
-            if (j.includes('jauh') || j.includes('> 150') || j.includes('>150')) return true;
-            if (j.includes('dekat') || j.includes('sedang') || j.includes('<= 150') || j.includes('<=150')) return false;
-            const num = parseFloat(j.replace(/[^0-9.]/g, ''));
-            if (!isNaN(num)) return num > 150;
-            return false;
-        }
-
-        // Helper untuk mendeteksi apakah Masa Kerja <= 3 Tahun (Dini / Baru)
-        function isMasaKerjaDini(mStr) {
-            const m = (mStr || "").toLowerCase().trim();
-            if (m.includes('baru') || m.includes('dini') || m.includes('<= 3') || m.includes('<=3') || m.includes('< 3') || m.includes('0-3') || m.includes('0-4')) return true;
-            if (m.includes('sedang') || m.includes('lama') || m.includes('> 3') || m.includes('>3')) return false;
-            const num = parseFloat(m.replace(/[^0-9.]/g, ''));
-            if (!isNaN(num)) return num <= 3;
-            return false;
-        }
-
-        // --- 2. MACHINE LEARNING LOGIC (C4.5 DECISION TREE RULES) ---
+        // --- 2. MACHINE LEARNING LOGIC ---
         function decisionTreePrediction(usiaInput, masaInput, jarakInput, statusInput) {
-            const s = (statusInput || "").toLowerCase().trim();
-            const isJauh = isJarakJauh(jarakInput);
-            const isBelumMenikah = s.includes('belum') || s.includes('lajang') || s.includes('single');
-            const isDini = isMasaKerjaDini(masaInput);
+            const u = (usiaInput || "").toLowerCase();
+            const m = (masaInput || "").toLowerCase();
+            const j = (jarakInput || "").toLowerCase();
+            const s = (statusInput || "").toLowerCase();
 
-            // RULE 1 (Kelompok Dekat): IF Jarak_Domisili <= 150 KM THEN Mutasi = Tidak
-            if (!isJauh) {
-                return {
-                    risk: 'Rendah',
-                    mutasi: 'Tidak',
-                    ruleName: 'RULE 1 (Kelompok Dekat)',
-                    confidence: '91,3%',
-                    label: 'Tidak Mutasi / Kondisi Aman (Kelompok Dekat - Tingkat Kepercayaan: 91,3%)',
-                    description: 'Jarak geografis domisili asal pegawai ke unit kerja penempatan di Lampung kurang dari atau sama dengan 150 kilometer, maka pegawai diprediksi berada pada kondisi aman atau tidak berpotensi mengajukan mutasi mandiri.',
-                    color: 'bg-green-100 border-green-500 text-green-700',
-                    icon: 'fa-check-circle text-green-500'
-                };
+            // REVISED RULES: Berdasarkan temuan lapangan aktual PLN Lampung (Multi-variabel KETAT)
+
+            // Rule 1 (SATU-SATUNYA PEMICU RISIKO TINGGI): Masa Kerja Lama + Jarak Jauh + Usia Produktif + Menikah
+            if (m.includes('lama') && j.includes('jauh') && u.includes('produktif') && s.includes('menikah') && !s.includes('belum')) {
+                return { risk: 'Tinggi', label: 'Sangat Berpotensi Mutasi (Puncak Karir & Prioritas Keluarga)', color: 'bg-red-100 border-red-500 text-red-700', icon: 'fa-exclamation-triangle text-red-500' };
             }
 
-            // Jika Jarak_Domisili > 150 KM:
-            // RULE 2 (Kelompok Luar Daerah & Lajang): IF Jarak_Domisili > 150 KM AND Status_Pernikahan = Belum Menikah THEN Mutasi = Ya (Potensi Sedang)
-            if (isBelumMenikah) {
-                return {
-                    risk: 'Sedang',
-                    mutasi: 'Ya',
-                    ruleName: 'RULE 2 (Kelompok Luar Daerah & Lajang)',
-                    confidence: '93,8%',
-                    label: 'Potensi Mutasi Sedang (Kelompok Luar Daerah & Lajang - Tingkat Kepercayaan: 93,8%)',
-                    description: 'Jarak domisili pegawai lebih dari 150 kilometer DAN pegawai berstatus belum menikah, maka pegawai diprediksi memiliki potensi sedang untuk mengajukan mutasi mandiri.',
-                    color: 'bg-yellow-100 border-yellow-500 text-yellow-700',
-                    icon: 'fa-exclamation-circle text-yellow-500'
-                };
+            // Rule 2: Sisanya yang jarak Jauh -> Risiko Sedang
+            if (j.includes('jauh')) {
+                return { risk: 'Sedang', label: 'Potensi Mutasi (Alasan Geografis)', color: 'bg-yellow-100 border-yellow-500 text-yellow-700', icon: 'fa-exclamation-circle text-yellow-500' };
             }
 
-            // Jika Jarak_Domisili > 150 KM DAN Status_Pernikahan = Menikah:
-            // RULE 3 (Kelompok Luar Daerah, Menikah & Dini): IF Jarak_Domisili > 150 KM AND Status_Pernikahan = Menikah AND Masa_Kerja <= 3 Tahun THEN Mutasi = Ya (Potensi Tinggi)
-            if (isDini) {
-                return {
-                    risk: 'Tinggi',
-                    mutasi: 'Ya',
-                    ruleName: 'RULE 3 (Kelompok Luar Daerah, Menikah & Dini)',
-                    confidence: '87,5%',
-                    label: 'Berpotensi Tinggi Mutasi (Kelompok Luar Daerah, Menikah & Dini - Tingkat Kepercayaan: 87,5%)',
-                    description: 'Jarak domisili pegawai lebih dari 150 kilometer, pegawai berstatus menikah, NAMUN memiliki masa kerja kurang dari atau sama dengan 3 tahun, maka pegawai diprediksi berpotensi tinggi mengajukan mutasi mandiri.',
-                    color: 'bg-red-100 border-red-500 text-red-700',
-                    icon: 'fa-exclamation-triangle text-red-500'
-                };
-            }
-
-            // RULE 4 (Kelompok Senior Terasimilasi): IF Jarak_Domisili > 150 KM AND Status_Pernikahan = Menikah AND Masa_Kerja > 3 Tahun THEN Mutasi = Tidak
-            return {
-                risk: 'Rendah',
-                mutasi: 'Tidak',
-                ruleName: 'RULE 4 (Kelompok Senior Terasimilasi)',
-                confidence: '85,7%',
-                label: 'Tidak Mutasi / Bertahan (Kelompok Senior Terasimilasi - Tingkat Kepercayaan: 85,7%)',
-                description: 'Jarak domisili pegawai lebih dari 150 kilometer, pegawai berstatus menikah, DAN telah memiliki masa kerja lebih dari 3 tahun, maka pegawai diprediksi telah terasimilasi dan bertahan pada unit kerja.',
-                color: 'bg-green-100 border-green-500 text-green-700',
-                icon: 'fa-check-circle text-green-500'
-            };
+            // Rule 3: Sisanya (Jarak Sedang/Dekat) -> Risiko Rendah
+            return { risk: 'Rendah', label: 'Tidak Mutasi (Stay)', color: 'bg-green-100 border-green-500 text-green-700', icon: 'fa-check-circle text-green-500' };
         }
 
         // --- 3. GOOGLE SHEETS INTEGRATION ---
@@ -512,10 +453,7 @@
                 const pred = decisionTreePrediction(row.usia, row.masa, row.jarak, row.status);
                 
                 // Simpan kalkulasi untuk fitur filter
-                row.calculatedRisk = pred.risk;
-                row.mutasiStatus = pred.mutasi;
-                row.ruleName = pred.ruleName;
-                row.confidence = pred.confidence;
+                row.calculatedRisk = pred.risk; 
                 row.badgeClass = pred.risk === 'Tinggi' ? 'bg-red-100 text-red-800' : 
                                  (pred.risk === 'Sedang' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800');
                 
@@ -570,8 +508,8 @@
                     <td class="px-6 py-4 text-gray-600">${row.jarak || '-'}</td>
                     <td class="px-6 py-4 text-gray-600">${row.status || '-'}</td>
                     <td class="px-6 py-4">
-                        <span class="px-3 py-1 rounded text-xs font-bold ${row.badgeClass}" title="${row.ruleName} (Kepercayaan: ${row.confidence})">
-                            ${row.calculatedRisk} Risk (Mutasi: ${row.mutasiStatus})
+                        <span class="px-3 py-1 rounded text-xs font-bold ${row.badgeClass}">
+                            ${row.calculatedRisk} Risk
                         </span>
                     </td>
                 `;
@@ -630,20 +568,18 @@
             
             resultBox.innerHTML = `
                 <i class="fa-solid ${pred.icon} text-6xl mb-4"></i>
-                <h2 class="text-2xl font-bold mb-1">Hasil Prediksi: Mutasi = ${pred.mutasi}</h2>
-                <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-white bg-opacity-60 mb-2">${pred.ruleName} • Kepercayaan: ${pred.confidence}</span>
+                <h2 class="text-2xl font-bold mb-2">Hasil Prediksi</h2>
                 <div class="p-4 bg-white bg-opacity-50 rounded-lg w-full mt-2">
                     <p class="text-gray-700">Pegawai <strong>${nama}</strong> diprediksi memiliki:</p>
                     <p class="text-3xl font-black mt-2 tracking-wide">${pred.risk.toUpperCase()} RISK</p>
-                    <p class="font-semibold mt-1 text-sm">(${pred.label})</p>
-                    <p class="text-xs text-gray-600 mt-2 italic">${pred.description}</p>
+                    <p class="font-semibold mt-1">(${pred.label})</p>
                 </div>
                 <div class="mt-6 text-sm text-left w-full border-t pt-4 border-opacity-30">
                     <strong>Rekomendasi Tindakan HRD:</strong><br>
                     <span class="text-gray-600 mt-1 block">
-                    ${pred.risk === 'Tinggi' ? 'Segera jadwalkan sesi konseling retensi (terkait adaptasi awal pernikahan & penempatan jauh). Pertimbangkan opsi rotasi kerja internal terdekat atau fasilitasi bantuan kunjungan keluarga.' : ''}
-                    ${pred.risk === 'Sedang' ? 'Lakukan pemantauan motivasi kerja dan keterikatan sosial secara berkala bagi pegawai lajang luar daerah. Pastikan karyawan tetap engage dengan program perusahaan.' : ''}
-                    ${pred.risk === 'Rendah' ? 'Karyawan diprediksi berada pada kondisi aman / telah terasimilasi dan bertahan pada unit kerja di Lampung. Lanjutkan penugasan dan pengembangan karir standar.' : ''}
+                    ${pred.risk === 'Tinggi' ? 'Segera jadwalkan sesi konseling retensi (terkait kesejahteraan keluarga). Pertimbangkan opsi rotasi kerja internal terdekat atau fasilitasi bantuan kunjungan keluarga.' : ''}
+                    ${pred.risk === 'Sedang' ? 'Lakukan pemantauan motivasi kerja secara berkala. Pastikan karyawan tetap engage dengan program perusahaan.' : ''}
+                    ${pred.risk === 'Rendah' ? 'Karyawan memiliki kecenderungan loyal (stay) yang tinggi di lokasi saat ini. Lanjutkan penugasan standar.' : ''}
                     </span>
                 </div>
             `;
@@ -652,6 +588,7 @@
         // Init App
         window.onload = () => {
             // Data pegawai tidak ditarik di sini lagi, melainkan menunggu Login sukses.
+            // fetchGoogleSheetsData(); 
         };
 
     </script>
