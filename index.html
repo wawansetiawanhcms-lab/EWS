@@ -37,9 +37,9 @@
 
     <!-- TOAST NOTIFICATION (Akan muncul di kanan bawah) -->
     <div id="toast-success" class="fixed bottom-8 right-8 bg-green-500 text-white px-6 py-4 rounded-lg shadow-2xl transform translate-y-24 opacity-0 transition-all duration-500 z-[100] flex items-center gap-4">
-        <i class="fa-solid fa-circle-check text-2xl"></i>
+        <i id="toast-icon" class="fa-solid fa-circle-check text-2xl"></i>
         <div>
-            <h4 class="font-bold text-sm">Data Berhasil Disimpan!</h4>
+            <h4 id="toast-title" class="font-bold text-sm">Data Berhasil Disimpan!</h4>
             <p class="text-xs mt-1" id="toast-msg">Log simulasi tercatat di database.</p>
         </div>
     </div>
@@ -49,7 +49,7 @@
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-2 bg-plnYellow"></div>
             <div class="text-center mb-8">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-24 mx-auto mb-4 object-contain drop-shadow-md" onerror="this.src='https://placehold.co/200x100/005a9c/ffffff?text=PLN'">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-24 mx-auto mb-4 object-contain drop-shadow-md">
                 <h2 class="text-2xl font-bold text-gray-800">EWS Mutasi PLN</h2>
                 <p class="text-gray-500 text-sm mt-1">Sistem Peringatan Dini HRD</p>
             </div>
@@ -97,7 +97,7 @@
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <div class="flex items-center gap-4">
                 <div class="bg-white p-1 rounded border-2 border-plnYellow flex items-center justify-center">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-10 w-auto object-contain" onerror="this.src='https://placehold.co/100x50/ffffff/005a9c?text=PLN'">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="h-10 w-auto object-contain">
                 </div>
                 <div>
                     <h1 class="text-xl font-bold">HRD Early Warning System</h1>
@@ -219,18 +219,18 @@
                                 <label class="block text-gray-700 text-sm font-bold mb-2">Usia</label>
                                 <select id="input-usia" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-plnCyan transition">
                                     <option value="" disabled selected>-- Pilih --</option>
-                                    <option value="Muda">Muda (< 30)</option>
+                                    <option value="Muda">Muda (&lt; 30)</option>
                                     <option value="Produktif">Produktif (31-40)</option>
-                                    <option value="Matang">Matang (> 40)</option>
+                                    <option value="Matang">Matang (&gt; 40)</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-bold mb-2">Masa Kerja</label>
                                 <select id="input-masa" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-plnCyan transition">
                                     <option value="" disabled selected>-- Pilih --</option>
-                                    <option value="Baru">Baru (0-4 Thn)</option>
-                                    <option value="Sedang">Sedang (5-10 Thn)</option>
-                                    <option value="Lama">Lama (> 10 Thn)</option>
+                                    <option value="Baru">Baru (&le; 3 Thn)</option>
+                                    <option value="Sedang">Sedang (4-10 Thn)</option>
+                                    <option value="Lama">Lama (&gt; 10 Thn)</option>
                                 </select>
                             </div>
                         </div>
@@ -239,9 +239,9 @@
                                 <label class="block text-gray-700 text-sm font-bold mb-2">Jarak Domisili Asal</label>
                                 <select id="input-jarak" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-plnCyan transition">
                                     <option value="" disabled selected>-- Pilih --</option>
-                                    <option value="Dekat">Dekat (< 50 km)</option>
+                                    <option value="Dekat">Dekat (&lt; 50 km)</option>
                                     <option value="Sedang">Sedang (50-150 km)</option>
-                                    <option value="Jauh">Jauh (> 150 km)</option>
+                                    <option value="Jauh">Jauh (&gt; 150 km)</option>
                                 </select>
                             </div>
                             <div>
@@ -281,19 +281,34 @@
     <!-- JavaScript Logic -->
     <script>
         // --- FUNGSI MUNCULKAN TOAST (NOTIFIKASI UI) ---
-        function showSuccessToast(namaPegawai) {
+        function showToast(title, message, isError = false) {
             const toast = document.getElementById('toast-success');
+            const toastTitle = document.getElementById('toast-title');
             const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
             
-            toastMsg.innerText = `Log prediksi simulasi ${namaPegawai} tercatat di database.`;
+            toastTitle.innerText = title;
+            toastMsg.innerText = message;
             
-            // Munculkan toast (hapus class sembunyi)
+            if (isError) {
+                toast.classList.remove('bg-green-500');
+                toast.classList.add('bg-red-600');
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-2xl';
+            } else {
+                toast.classList.remove('bg-red-600');
+                toast.classList.add('bg-green-500');
+                toastIcon.className = 'fa-solid fa-circle-check text-2xl';
+            }
+            
             toast.classList.remove('translate-y-24', 'opacity-0');
             
-            // Hilangkan otomatis setelah 4 detik
             setTimeout(() => {
                 toast.classList.add('translate-y-24', 'opacity-0');
             }, 4000);
+        }
+
+        function showSuccessToast(namaPegawai) {
+            showToast('Data Berhasil Disimpan!', `Log prediksi simulasi ${namaPegawai} tercatat di database.`, false);
         }
 
         // --- 0. LOGIN & ENCRYPTION LOGIC ---
@@ -402,22 +417,76 @@
         let allEmployeeData = [];
         let chartInstance = null;
 
-        // --- 2. MACHINE LEARNING LOGIC ---
+        // --- 2. MACHINE LEARNING LOGIC (4 RULES DECISION TREE C4.5) ---
         function decisionTreePrediction(usiaInput, masaInput, jarakInput, statusInput) {
-            const u = (usiaInput || "").toLowerCase();
             const m = (masaInput || "").toLowerCase();
             const j = (jarakInput || "").toLowerCase();
             const s = (statusInput || "").toLowerCase();
 
-            if (u.includes('produktif') && m.includes('lama') && j.includes('jauh') && s.includes('menikah') && !s.includes('belum')) {
-                return { risk: 'Tinggi', label: 'Sangat Berpotensi Mutasi (Puncak Karir & Prioritas Keluarga)', color: 'bg-red-100 border-red-500 text-red-700', icon: 'fa-exclamation-triangle text-red-500' };
+            // Deteksi apakah Jarak > 150 KM (Jauh) atau <= 150 KM (Dekat / Sedang)
+            const isJauh = j.includes('jauh') || j.includes('> 150') || j.includes('>150');
+
+            // Deteksi Status Pernikahan
+            const isBelumMenikah = s.includes('belum') || s.includes('lajang') || s.includes('single');
+            const isMenikah = s.includes('menikah') && !isBelumMenikah;
+
+            // Deteksi Masa Kerja <= 3 Tahun (Baru / Dini) vs > 3 Tahun (Sedang / Lama)
+            const numMatch = m.match(/\d+/);
+            const isMasaKerjaDini = m.includes('baru') || m.includes('dini') || m.includes('<= 3') || m.includes('<=3') || m.includes('0-3') || m.includes('0-4') || (numMatch && parseInt(numMatch[0], 10) <= 3 && !m.includes('>'));
+
+            // RULE 1 (Kelompok Dekat): IF Jarak_Domisili <= 150 KM THEN Mutasi = Tidak
+            if (!isJauh) {
+                return {
+                    rule: 'RULE 1 (Kelompok Dekat)',
+                    mutasi: 'Tidak',
+                    confidence: '91,3%',
+                    risk: 'Rendah',
+                    label: 'Kondisi Aman / Tidak Berpotensi Mengajukan Mutasi Mandiri (Tingkat Kepercayaan: 91,3%)',
+                    color: 'bg-green-100 border-green-500 text-green-700',
+                    icon: 'fa-check-circle text-green-500',
+                    recommendation: 'Pegawai berdomisili ≤ 150 km dari unit kerja penempatan di Lampung sehingga berada pada kondisi aman (stay). Lanjutkan penugasan standar dan program pengembangan kompetensi reguler.'
+                };
             }
 
-            if (j.includes('jauh')) {
-                return { risk: 'Sedang', label: 'Potensi Mutasi (Alasan Geografis)', color: 'bg-yellow-100 border-yellow-500 text-yellow-700', icon: 'fa-exclamation-circle text-yellow-500' };
+            // RULE 2 (Kelompok Luar Daerah & Lajang): IF Jarak_Domisili > 150 KM AND Status_Pernikahan = Belum Menikah THEN Mutasi = Ya
+            if (isJauh && isBelumMenikah) {
+                return {
+                    rule: 'RULE 2 (Kelompok Luar Daerah & Lajang)',
+                    mutasi: 'Ya',
+                    confidence: '93,8%',
+                    risk: 'Sedang',
+                    label: 'Potensi Sedang Mengajukan Mutasi Mandiri - Luar Daerah & Lajang (Tingkat Kepercayaan: 93,8%)',
+                    color: 'bg-yellow-100 border-yellow-500 text-yellow-700',
+                    icon: 'fa-exclamation-circle text-yellow-500',
+                    recommendation: 'Lakukan pemantauan motivasi kerja dan keterikatan (engagement) secara berkala. Libatkan pegawai dalam komunitas internal atau penugasan proyek strategis agar tetap betah di unit kerja.'
+                };
             }
 
-            return { risk: 'Rendah', label: 'Tidak Mutasi (Stay)', color: 'bg-green-100 border-green-500 text-green-700', icon: 'fa-check-circle text-green-500' };
+            // RULE 3 (Kelompok Luar Daerah, Menikah & Dini): IF Jarak_Domisili > 150 KM AND Status_Pernikahan = Menikah AND Masa_Kerja <= 3 Tahun THEN Mutasi = Ya
+            if (isJauh && isMenikah && isMasaKerjaDini) {
+                return {
+                    rule: 'RULE 3 (Kelompok Luar Daerah, Menikah & Dini)',
+                    mutasi: 'Ya',
+                    confidence: '87,5%',
+                    risk: 'Tinggi',
+                    label: 'Berpotensi Tinggi Mengajukan Mutasi Mandiri - Luar Daerah, Menikah & Masa Kerja ≤ 3 Thn (Tingkat Kepercayaan: 87,5%)',
+                    color: 'bg-red-100 border-red-500 text-red-700',
+                    icon: 'fa-exclamation-triangle text-red-500',
+                    recommendation: 'Segera jadwalkan sesi konseling retensi terkait adaptasi awal dan kesejahteraan keluarga. Pertimbangkan opsi fasilitasi kunjungan keluarga, pendampingan adaptasi, atau perencanaan rotasi bertahap.'
+                };
+            }
+
+            // RULE 4 (Kelompok Senior Terasimilasi): IF Jarak_Domisili > 150 KM AND Status_Pernikahan = Menikah AND Masa_Kerja > 3 Tahun THEN Mutasi = Tidak
+            return {
+                rule: 'RULE 4 (Kelompok Senior Terasimilasi)',
+                mutasi: 'Tidak',
+                confidence: '85,7%',
+                risk: 'Rendah',
+                label: 'Telah Terasimilasi & Bertahan pada Unit Kerja - Masa Kerja > 3 Thn (Tingkat Kepercayaan: 85,7%)',
+                color: 'bg-green-100 border-green-500 text-green-700',
+                icon: 'fa-check-circle text-green-500',
+                recommendation: 'Pegawai dinilai telah terasimilasi dan mapan di unit kerja meskipun berasal dari luar daerah (> 150 km). Pertahankan apresiasi kinerja dan libatkan sebagai mentor bagi pegawai baru.'
+            };
         }
 
         // --- 3. GOOGLE SHEETS INTEGRATION ---
@@ -449,7 +518,10 @@
                 if (!row.nama || row.nama.trim() === "") return;
                 
                 const pred = decisionTreePrediction(row.usia, row.masa, row.jarak, row.status);
-                row.calculatedRisk = pred.risk; 
+                row.calculatedRisk = pred.risk;
+                row.calculatedRule = pred.rule;
+                row.calculatedMutasi = pred.mutasi;
+                row.calculatedConfidence = pred.confidence;
                 row.badgeClass = pred.risk === 'Tinggi' ? 'bg-red-100 text-red-800' : 
                                  (pred.risk === 'Sedang' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800');
                 
@@ -501,7 +573,7 @@
                     <td class="px-6 py-4 text-gray-600">${row.jarak || '-'}</td>
                     <td class="px-6 py-4 text-gray-600">${row.status || '-'}</td>
                     <td class="px-6 py-4">
-                        <span class="px-3 py-1 rounded text-xs font-bold ${row.badgeClass}">
+                        <span class="px-3 py-1 rounded text-xs font-bold ${row.badgeClass}" title="${row.calculatedRule} | Mutasi: ${row.calculatedMutasi} (${row.calculatedConfidence})">
                             ${row.calculatedRisk} Risk
                         </span>
                     </td>
@@ -562,19 +634,16 @@
             
             resultBox.innerHTML = `
                 <i class="fa-solid ${pred.icon} text-6xl mb-4 transform scale-110 transition-transform"></i>
-                <h2 class="text-2xl font-bold mb-2">Hasil Prediksi</h2>
-                <div class="p-4 bg-white bg-opacity-50 rounded-lg w-full mt-2">
+                <h2 class="text-2xl font-bold mb-1">Hasil Prediksi</h2>
+                <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white bg-opacity-70 mb-2">${pred.rule}</span>
+                <div class="p-4 bg-white bg-opacity-50 rounded-lg w-full mt-1">
                     <p class="text-gray-700">Pegawai <strong>${nama}</strong> diprediksi memiliki:</p>
-                    <p class="text-3xl font-black mt-2 tracking-wide">${pred.risk.toUpperCase()} RISK</p>
-                    <p class="font-semibold mt-1">(${pred.label})</p>
+                    <p class="text-3xl font-black mt-2 tracking-wide">${pred.risk.toUpperCase()} RISK (Mutasi: ${pred.mutasi})</p>
+                    <p class="font-semibold mt-1 text-sm">(${pred.label})</p>
                 </div>
                 <div class="mt-6 text-sm text-left w-full border-t pt-4 border-opacity-30">
                     <strong>Rekomendasi Tindakan HRD:</strong><br>
-                    <span class="text-gray-800 mt-1 block">
-                    ${pred.risk === 'Tinggi' ? 'Segera jadwalkan sesi konseling retensi (terkait kesejahteraan keluarga). Pertimbangkan opsi rotasi kerja internal terdekat atau fasilitasi bantuan kunjungan keluarga.' : ''}
-                    ${pred.risk === 'Sedang' ? 'Lakukan pemantauan motivasi kerja secara berkala. Pastikan karyawan tetap engage dengan program perusahaan.' : ''}
-                    ${pred.risk === 'Rendah' ? 'Karyawan memiliki kecenderungan loyal (stay) yang tinggi di lokasi saat ini. Lanjutkan penugasan standar.' : ''}
-                    </span>
+                    <span class="text-gray-800 mt-1 block">${pred.recommendation}</span>
                 </div>
             `;
 
@@ -600,7 +669,7 @@
                 })
                 .catch(error => {
                     console.error('Gagal menyimpan log:', error);
-                    alert("Gagal menyimpan ke log. Periksa koneksi internet Anda.");
+                    showToast('Gagal Menyimpan Log', 'Periksa koneksi internet Anda.', true);
                 });
         }
     </script>
